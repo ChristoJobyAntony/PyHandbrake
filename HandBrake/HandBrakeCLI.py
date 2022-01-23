@@ -69,19 +69,7 @@ class HandBrakeCLI :
         quoteWhiteSpace = lambda x :  '"'+x+'"' if " " in x else x
         return os.sep + os.path.join(*map(quoteWhiteSpace, path.split(os.sep)))
     
-    def buildCommnad (self) -> str :
-        configurations = {
-            "--verbose" : self.verbose,
-            "--input" : self._formatPath(self.input),
-            "--output" : self._formatPath(self.output),
-            "--format" : self.format,
-            "--encoder" : self.encoder,
-            "--quality" : self.quality,
-            "--audio" : self.audio,
-            "--subtitle" : self.subtitle,
-            "--width" : self.media.width,
-            "--height" : self.media.height
-        } 
+    def buildCommnad (self) -> str : 
         os.path.splitdrive
         command = "HandBrakeCLI  "
         for flag, value in self.config.items() :
@@ -95,32 +83,6 @@ class HandBrakeCLI :
             command += flag + " "+ value + " "
         return command
     
-    def buildFlags (self) -> List[str] :
-        configurations = {
-            "--verbose" : self.verbose,
-            "--input" : self._formatPath(self.input),
-            "--output" : self._formatPath(self.output),
-            "--format" : self.format,
-            "--encoder" : self.encoder,
-            "--quality" : self.quality,
-            "--audio" : self.audio,
-            "--subtitle" : self.subtitle,
-            "--width" : self.media.width,
-            "--height" : self.media.height
-        } 
-        os.path.splitdrive
-        flags = []
-        for flag, value in configurations.items() :
-            if value == None : 
-                continue 
-            elif type(value) == set : 
-                value = ", ".join(map(lambda x : str(x.id), value))
-            elif type(value) != str :
-                value = str(value)
-            flags.append(flag)
-            flags.append(value)
-        return flags
-
     def isRunning (self) -> bool :
         if self.proccess : 
             return True if self.proccess.poll() is None  else False
