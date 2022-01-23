@@ -24,7 +24,7 @@ class HandBrakeCLI :
 
         self.verbose : int = 1
         self.media = media
-        self.width = self.media.width
+        self.width:set(int) = self.media.width
         self.height = self.media.height
         self.input = self.media.path
         self.output : str = os.path.join(os.path.dirname(self.input), outFile)+"."+self.media.extension
@@ -35,31 +35,32 @@ class HandBrakeCLI :
         self.subtitle : Set[TextTrack] = set()
 
         self.config =  {
-            "--verbose" : self.verbose,
-            "--input" : self._formatPath(self.input),
-            "--output" : self._formatPath(self.output),
-            "--format" : self.format,
-            "--encoder" : self.encoder,
-            "--quality" : self.quality,
-            "--audio" : self.audio,
-            "--subtitle" : self.subtitle,
-            "--width" : self.media.width,
-            "--height" : self.media.height
+            "--verbose" : lambda : self.verbose,
+            "--input" : lambda : self._formatPath(self.input),
+            "--output" : lambda : self._formatPath(self.output),
+            "--format" : lambda :  self.format,
+            "--encoder" : lambda : self.encoder,
+            "--quality" : lambda : self.quality,
+            "--audio" : lambda : self.audio,
+            "--subtitle" : lambda : self.subtitle,
+            "--width" : lambda : self.width,
+            "--height" : lambda : self.height
         }
     
     def __repr__(self) -> str:
-        return "HandBrakeCLI Command \n\t" + "\n\t".join([f"{k} : {v}" for k, v in self.config.items()])
+        return "HandBrakeCLI Command \n\t" + "\n\t".join([f"{k} : {v()}" for k, v in self.config.items()])
 
     def setEncoder (self, enc:str) -> None : 
         if enc in self.ENCODERS : self.encoder = enc
         else : raise("Invalid Encoder being set")
     
     def setResolution (self, height:int, width:int=None) -> None:
-        if not width :
+        if width is None :
             ratio = self.media.width / self.media.height
             width = int(ratio * height)
             self.width = width
             self.height = height
+            print(self.width, self.height)
         else : 
             self.width = width
             self.height = height
@@ -83,7 +84,8 @@ class HandBrakeCLI :
         } 
         os.path.splitdrive
         command = "HandBrakeCLI  "
-        for flag, value in configurations.items() :
+        for flag, value in self.config.items() :
+            value = value()
             if value == None : 
                 continue 
             elif type(value) == set : 
