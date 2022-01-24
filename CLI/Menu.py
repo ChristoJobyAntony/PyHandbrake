@@ -36,6 +36,7 @@ class Menu :
                             item[1](*item[2])
                         except Exception as e:
                             print("Failed to excute function due to,", e) 
+                            raise e
                         if self.runUntilExit : break
                         else : return
                     elif n == len(self.menu)+1 : 

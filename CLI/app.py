@@ -1,43 +1,28 @@
 import os
-from queue import Queue
-import threading
+from multiprocessing import Queue
+from threading import Thread
 from typing import List
-from HandBrake.HandBrakeCLI import HandBrakeCLI 
+from HandBrake.Command import Command 
 from HandBrake.Media import Media
 from CLI.Menu import Menu
 from pprint import pprint
-# 0549971012
-base = "/"
-jobQueue : Queue[HandBrakeCLI] = Queue()
-currentJob : HandBrakeCLI = None
-running = True
+from HandBrake.ProcessHandler import ProcessHandler
 
-def runJobs () :
-    while (running) : 
-        global currentJob
-        job = jobQueue.get(block=True)
-        if not job : 
-            currentJob = None
-            break
-        print("Starting job :", job.input)
-        job.run()
-        currentJob = job
-        while (currentJob.isRunning()) :
-            pass
-t = threading.Thread(target=runJobs)
+p = ProcessHandler()
+
 
 def configureMedia(file:str) :
     media = Media(file)
-    command = HandBrakeCLI(media)
+    command = Command(media)
     
     setAudioTracksAction = lambda track : command.audio.add(track)
     setSubtitleAction = lambda track :  command.subtitle.add(track)
     setEncoderAction = lambda enc : command.setEncoder(enc)
     setResolutionAction = lambda res : command.setResolution(res)
-    setAudioTracks = Menu("Choose Subtitle to add", [(track.title, setAudioTracksAction, [track]) for track in media.audioTracks] )
-    setSubtitleTracks = Menu("Choose Subtitle to add", [(track.title, setSubtitleAction, [track]) for track in media.textTrack] )
-    setEncodingEngine = Menu(  "Choose Encoding Engine", [ (enc, setEncoderAction , [enc]) for enc in HandBrakeCLI.ENCODERS ])
-    setResolution = Menu("Resolution", [ (res, setResolutionAction, [res]) for res in command.RESOLUTIONS])
+    setAudioTracks = Menu("Choose Subtitle to add", [(track.title, setAudioTracksAction, [track]) for track in media.audioTracks], runUntilExit=False )
+    setSubtitleTracks = Menu("Choose Subtitle to add", [(track.title, setSubtitleAction, [track]) for track in media.textTrack], runUntilExit=False )
+    setEncodingEngine = Menu(  "Choose Encoding Engine", [ (enc, setEncoderAction , [enc]) for enc in Command.ENCODERS ], runUntilExit=False)
+    setResolution = Menu("Resolution", [ (res, setResolutionAction, [res]) for res in command.RESOLUTIONS], runUntilExit=False)
 
     encodingConfigMenu = Menu("Configure Encoder")
     encodingConfigMenu.addMenu("View Configuration", pprint, args=[command])
@@ -60,24 +45,32 @@ def configureMedia(file:str) :
     addItemToQueue.run()
 
 def ViewCurrentJob () :
-    if currentJob == None:
-        print ("\n The current Job queue is empty add a new encoding job.")
+    currentJob = p.getCurrentProcess()
+    if not currentJob: print ("\n The current Job queue is empty add a new encoding job.")
     else : 
-        # if currentJob.isRunning() : 
         print(f"The current running job is encoding file {currentJob.input} to {currentJob.output}")
         if currentJob.percent and currentJob.avgFPS and currentJob.ETA : 
             print(f"The progress of the job is : {currentJob.percent}% at an averag {currentJob.avgFPS} FPS with an ETA {currentJob.ETA}")
 
 def viewJobQueue () :
-    if jobQueue.empty () :
+    q = p.getQueuedProcess()
+    if not len(q) :
         print("The Job Queue is empty !!")
     else :
-        for i, job in enumerate(list(jobQueue.queue)) : 
+        for i, job in enumerate(list(q)) : 
             print(i,job.input)
 
-def addItemToJobQueue (command : HandBrakeCLI) :
+def viewCompletedJobQueue () : 
+    q = p.getcompletedProcess()
+    if not len(q) :
+        print("No jobs yet completed !!")
+    else :
+        for i, job in enumerate(list(q)) : 
+            print(i,job.input)
+    
+def addItemToJobQueue (command : Command) :
     print("**Media has been queued for transcoding !**\n")
-    jobQueue.put_nowait(command)
+    p.addProcess(command)
 
 def chooseMedia (base:str="/mnt/media/Movies/") :
     m = Menu("Choose Media Direcotry :"+base, runUntilExit=False)
@@ -91,23 +84,13 @@ def chooseMedia (base:str="/mnt/media/Movies/") :
             m.addMenu(file, configureMedia, args = [path])
     m.run()
 
-def stopProgram () :
-    global running
-    if running or t.is_alive() : 
-        running = False
-        jobQueue.put_nowait(None)
-        t.join()
-        print("Program exited gracefully")
-        quit()
-
-
 handBrakeManager = Menu("HandBrakeManager")
 handBrakeManager.addMenu("View the Current Encoding Proccess", ViewCurrentJob)
 handBrakeManager.addMenu("View the job queue", viewJobQueue)
+handBrakeManager.addMenu("View the completed job queue", viewJobQueue)
 handBrakeManager.addMenu("Select media to add to queue", chooseMedia)
-handBrakeManager.addMenu("Stop the program", stopProgram)
 
 def runApp():
-    t.start()
-    handBrakeManager.run()
-    stopProgram()
+    p.run()
+    handBrakeManager.run()  
+    p.stop()
