@@ -9,7 +9,7 @@ The aim of this project is to abstract HandbrakeCLI and to handle the applicatio
 Currently this project includes a basic CLI application to configure and queue transcoding tasks to HandBrakeCLI through a simple Menu Interface.
 <br>
 
-## Prerequisites
+## Pre Requisites
 While this application is in theory multi-platform it is still require some critical dependencies.
 1. HandBrakeCLI - This app needs the HandbrakeCLI command line application installed and isn't bundled with the this app.
    
