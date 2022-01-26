@@ -24,6 +24,7 @@ class ProcessHandler :
         self.endSig.value = 0
         # Current Encoding process stats
         self.FPS : Value = Value("f", lock=True)
+        with self.FPS.get_lock() : self.FPS.value = -1
         self.ETA : Array = Array("u", 9, lock=True)
         self.percent : Value = Value("f", lock=True)
     
@@ -39,7 +40,7 @@ class ProcessHandler :
         while not self._completedCommandQueue.empty() : 
             p = self._commandQueue.get()
             if p == self.processList[0].buildCommnad() : 
-                self.completedProcessList(self.processList.pop(0))
+                self.completedProcessList.append(self.processList.pop(0))
             else : 
                 print("Error !!", p, self.processList[0])
 
@@ -58,7 +59,8 @@ class ProcessHandler :
     
     def getStats (self) -> Tuple[float, float, str] : 
         with self.ETA.get_lock(), self.FPS.get_lock(), self.percent.get_lock() :
-            return(self.percent.value, self.FPS.value, self.ETA[0:9])
+            if int(self.FPS.value) < 0 : return None
+            else : return(self.percent.value, self.FPS.value, self.ETA[0:9])
     
     def listener(proccessQueue : Queue, completedProccess : Queue, endSig:Value, percent:Value, ETA:Array, FPS:Value, isRunning:Value ) -> None:
         # print("Listener Starting")
@@ -68,7 +70,7 @@ class ProcessHandler :
             # Try to get a job from the queue every one second
             try : command : str = proccessQueue.get(block=True, timeout=1)
             except q.Empty : continue
-            print("Starting Job : "+command)
+            # print("Starting Job : "+command)
             process = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE, shell=True)
             with isRunning.get_lock() : isRunning.value = True
             line = ""
@@ -88,7 +90,6 @@ class ProcessHandler :
             else : 
                 print("OUt I go ...")
                 with isRunning.get_lock() : isRunning.value = False
-                proccessQueue.task_done()
                 completedProccess.put_nowait(command)
      
     def run (self) :

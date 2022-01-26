@@ -49,8 +49,9 @@ def ViewCurrentJob () :
     if not currentJob: print ("\n The current Job queue is empty add a new encoding job.")
     else : 
         print(f"The current running job is encoding file {currentJob.input} to {currentJob.output}")
-        if currentJob.percent and currentJob.avgFPS and currentJob.ETA : 
-            print(f"The progress of the job is : {currentJob.percent}% at an averag {currentJob.avgFPS} FPS with an ETA {currentJob.ETA}")
+        stat = p.getStats()
+        if not stat is None  : 
+            print(f"The progress of the job is : {stat[0]}% at an average {stat[1]} FPS and ETA {stat[2]}")
 
 def viewJobQueue () :
     q = p.getQueuedProcess()
@@ -69,8 +70,8 @@ def viewCompletedJobQueue () :
             print(i,job.input)
     
 def addItemToJobQueue (command : Command) :
-    print("**Media has been queued for transcoding !**\n")
     p.addProcess(command)
+    print("**Media has been queued for transcoding !**\n")
 
 def chooseMedia (base:str="/mnt/media/Movies/") :
     m = Menu("Choose Media Direcotry :"+base, runUntilExit=False)
@@ -87,7 +88,7 @@ def chooseMedia (base:str="/mnt/media/Movies/") :
 handBrakeManager = Menu("HandBrakeManager")
 handBrakeManager.addMenu("View the Current Encoding Proccess", ViewCurrentJob)
 handBrakeManager.addMenu("View the job queue", viewJobQueue)
-handBrakeManager.addMenu("View the completed job queue", viewJobQueue)
+handBrakeManager.addMenu("View the completed job queue", viewCompletedJobQueue)
 handBrakeManager.addMenu("Select media to add to queue", chooseMedia)
 
 def runApp():
